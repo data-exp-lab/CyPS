@@ -1,0 +1,55 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module nufft3df90 ! in 
+    interface  ! in :nufft3df90
+        subroutine nufft3d1f90(nj,xj,yj,zj,cj,iflag,eps,ms,mt,mu,fk,ier) ! in :nufft3df90:nufft3df90.f
+            integer, optional,check(len(xj)>=nj),depend(xj) :: nj=len(xj)
+            real*8 dimension(nj) :: xj
+            real*8 dimension(nj),depend(nj) :: yj
+            real*8 dimension(nj),depend(nj) :: zj
+            complex*16 dimension(nj),depend(nj) :: cj
+            integer :: iflag
+            real*8  :: eps
+            integer :: ms
+            integer :: mt
+            integer :: mu
+            complex*16 dimension(ms, mt, mu), intent(out), depend(ms, mt, mu) :: fk
+            integer intent(out) :: ier
+        end subroutine nufft3d1f90
+        
+        subroutine nufft3d2f90(nj,xj,yj,zj,cj,iflag,eps,ms,mt,mu,fk,ier) ! in :nufft3df90:nufft3df90.f
+            integer, optional,check(len(xj)>=nj),depend(xj) :: nj=len(xj)
+            real*8 dimension(nj) :: xj
+            real*8 dimension(nj), depend(nj) :: yj
+            real*8 dimension(nj), depend(nj) :: zj
+            complex*16 dimension(nj), intent(out), depend(nj) :: cj
+            integer :: iflag
+            real*8  :: eps
+            integer :: ms
+            integer :: mt
+            integer :: mu
+            complex*16 dimension(ms, mt, mu), depend(ms, mt, mu) :: fk
+            integer intent(out) :: ier
+        end subroutine nufft3d2f90
+        
+        subroutine nufft3d3f90(nj,xj,yj,zj,cj,iflag,eps,nk,sk,tk,uk,fk,ier) ! in :nufft3df90:nufft3df90.f
+            integer, optional,check(len(xj)>=nj),depend(xj) :: nj=len(xj)
+            real*8 dimension(nj) :: xj
+            real*8 dimension(nj),depend(nj) :: yj
+            real*8 dimension(nj),depend(nj) :: zj
+            complex*16 dimension(nj),depend(nj) :: cj
+            integer :: iflag
+            real*8 :: eps
+            integer, optional,check(len(sk)>=nk),depend(sk) :: nk=len(sk)
+            real*8 dimension(nk) :: sk
+            real*8 dimension(nk),depend(nk) :: tk
+            real*8 dimension(nk),depend(nk) :: uk
+            complex*16 dimension(nk),depend(nk) :: fk
+            integer :: ier
+        end subroutine nufft3d3f90
+    end interface 
+end python module nufft3df90
+
+! This file was auto-generated with f2py (version:2).
+! See http://cens.ioc.ee/projects/f2py2e/

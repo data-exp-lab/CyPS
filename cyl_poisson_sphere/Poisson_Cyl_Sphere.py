@@ -23,6 +23,18 @@ class Poisson_Cyl_Sphere:
             print("Method has to be either convolution or nufft. Reset method to convolution.")
             self.method = "convolution"
         
+        self.__initialize()
+        
+        ## place density
+        self.__place_rho()
+        
+        if (method == "convolution"):
+            self.__init_convolution()
+        elif (method=="nufft"):
+            self.__init_nufft()
+        
+        
+    def __initialize(self, _x1_min=1.0, _x1_max=2.0, _x2_min=0.0, _x2_max=2.0*np.pi, _x3_min=0.0, _x3_max=1.0, _N1=NN, _N2=8*NN, _N3=NN):
         # simulation domain
         self._x1_min = 1.0
         self._x1_max = 2.0
@@ -60,19 +72,28 @@ class Poisson_Cyl_Sphere:
         self.__dist2center = np.sqrt( (self.__crt_x1-self.x0)**2.0 + (self.__crt_x2-self.y0)**2.0 + (self.__crt_x3-self.z0)**2.0 )
         
         ## save result
-        self.__kernel_out = np.full((self._N1, self._N1, self._N2, 2*self._N3), None)
         self.__solution = np.full(self.__grid_shape, None)
         
-        ## init
-        self.__initialize()
-        
-        if (method=="nufft"):
-            self.__init_nufft()
-        
-        
-    def __initialize(self):
+    
+    def __place_rho(self):
         idx = self.__dist2center <= self.R0
         self.__rho_array[idx] = self.rho
+        
+    
+    def reset_simulation_domain(self, x1_min, x1_max, x2_min, x2_max, x3_min, x3_max, N1, N2, N3):
+        """ This allows changing of simulation box size and resolution in all three directions """
+        
+        self.__initialize(_x1_min=x1_min, _x1_max=x1_max, _x2_min=x2_min, _x2_max=x2_max, _x3_min=x3_min, _x3_max=x3_max, _N1=N1, _N2=N2, _N3=N3)
+        self.__place_rho()
+        
+        if (method == "convolution"):
+            self.__init_convolution()
+        elif (method=="nufft"):
+            self.__init_nufft()
+    
+    
+    def __init_convolution(self):
+        self.__kernel_out = np.full((self._N1, self._N1, self._N2, 2*self._N3), None)
     
     
     def __init_nufft(self):

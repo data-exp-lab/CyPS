@@ -36,16 +36,16 @@ class Poisson_Cyl_Sphere:
         
     def __initialize(self, _x1_min=1.0, _x1_max=2.0, _x2_min=0.0, _x2_max=2.0*np.pi, _x3_min=0.0, _x3_max=1.0, _N1=NN, _N2=8*NN, _N3=NN):
         # simulation domain
-        self._x1_min = 1.0
-        self._x1_max = 2.0
-        self._x2_min = 0.0
-        self._x2_max = 2.0*np.pi
-        self._x3_min = 0.0
-        self._x3_max = 1.0
+        self._x1_min = _x1_min
+        self._x1_max = _x1_max
+        self._x2_min = _x2_min
+        self._x2_max = _x2_max
+        self._x3_min = _x3_min
+        self._x3_max = _x3_max
         
-        self._N1 = NN
-        self._N2 = 8*NN
-        self._N3 = NN
+        self._N1 = _N1
+        self._N2 = _N1
+        self._N3 = _N1
                 
         # private vars
         self.__grid_shape = (self._N1, self._N2, self._N3)
@@ -96,7 +96,7 @@ class Poisson_Cyl_Sphere:
         self.__kernel_out = np.full((self._N1, self._N1, self._N2, 2*self._N3), None)
     
     
-    def __init_nufft(self):
+    def __init_nufft(self, __ms=2*self._N1, __mt = 2*self._N2, __mu = 2*self._N3, __eps = 10.0**(-5.0)):
         # nufft parameters
         self.__ms = 2*self._N1
         self.__mt = 2*self._N2
@@ -104,7 +104,7 @@ class Poisson_Cyl_Sphere:
         
         self.__eps = 10.0**(-5.0)
         
-        self.__volume = 8.0*float(self._N1*self._N2*self._N3)
+        self.__volume = float(self.__ms)*float(self.__mt)*float(self.__mu)
         
         # coordinate related
         self.__crt_x1_min = -1.0 * self._x1_max
@@ -138,6 +138,8 @@ class Poisson_Cyl_Sphere:
         self.__green_k = np.full((self.__ms, self.__mt, self.__mu), None)
         
         
+    def reset_nufft_parameter(self, ms, mt, mu, eps):
+        self.__init_nufft(self, __ms = ms, __mt = mt, __mu = mu, __eps = eps)
 
         
     def __kernel(self):

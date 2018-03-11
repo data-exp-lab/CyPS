@@ -22,31 +22,25 @@ class Poisson_Cyl_Sphere:
         if (self.method != "convolution" and self.method != "nufft"):
             print("Method has to be either convolution or nufft. Reset method to convolution.")
             self.method = "convolution"
+            
+        # simulation domain
+        self._x1_min = 0.2
+        self._x1_max = 8.2
+        self._x2_min = 0.0
+        self._x2_max = 2.0*np.pi
+        self._x3_min = 0.0
+        self._x3_max = 8.0
+        
+        self._N1 = NN
+        self._N2 = 8*NN
+        self._N3 = NN
         
         self.__initialize()
-        
-        ## place density
         self.__place_rho()
         
-        if (method == "convolution"):
-            self.__init_convolution()
-        elif (method=="nufft"):
-            self.__init_nufft()
         
+    def __initialize(self):
         
-    def __initialize(self, _x1_min=1.0, _x1_max=2.0, _x2_min=0.0, _x2_max=2.0*np.pi, _x3_min=0.0, _x3_max=1.0, _N1=NN, _N2=8*NN, _N3=NN):
-        # simulation domain
-        self._x1_min = _x1_min
-        self._x1_max = _x1_max
-        self._x2_min = _x2_min
-        self._x2_max = _x2_max
-        self._x3_min = _x3_min
-        self._x3_max = _x3_max
-        
-        self._N1 = _N1
-        self._N2 = _N1
-        self._N3 = _N1
-                
         # private vars
         self.__grid_shape = (self._N1, self._N2, self._N3)
         
@@ -74,36 +68,61 @@ class Poisson_Cyl_Sphere:
         ## save result
         self.__solution = np.full(self.__grid_shape, None)
         
+        ##
+        if (self.method == "nufft"):
+            self.__ms  = 2*self._N1
+            self.__mt  = 2*self._N2
+            self.__mu  = 2*self._N3        
+            self.__eps = 10.0**(-5.0)
+            
+        
+        ## init method specific coord 
+        if (self.method == "convolution"):
+            self.__init_convolution()
+        elif (self.method=="nufft"):
+            self.__init_nufft()
+        
     
     def __place_rho(self):
         idx = self.__dist2center <= self.R0
         self.__rho_array[idx] = self.rho
         
     
-    def reset_simulation_domain(self, x1_min, x1_max, x2_min, x2_max, x3_min, x3_max, N1, N2, N3):
-        """ This allows changing of simulation box size and resolution in all three directions """
+    def reset_simulation_domain(self, N1, N2, N3, x1_min=0.2, x1_max=8.2, x2_min=0.0, x2_max=2.0*np.pi, x3_min=0.0, x3_max=8.0):
+        """ 
+        This allows changing of simulation box size and resolution in all three directions.
+        N1: Resolution in r-direction
+        N2: Resolution in phi-direction
+        N3: Resolution in z-direction
+        x1_min: inner boundary in r-dir
+        x1_max: outer boundary in r-dir
+        x2_min: inner boundary in phi-dir
+        x2_max: outer boundary in phi-dir
+        x3_min: inner boundary in z-dir
+        x3_max: outer boundary in z-dir
+        """
         
-        self.__initialize(_x1_min=x1_min, _x1_max=x1_max, _x2_min=x2_min, _x2_max=x2_max, _x3_min=x3_min, _x3_max=x3_max, _N1=N1, _N2=N2, _N3=N3)
+        self._x1_min = x1_min
+        self._x1_max = x1_max
+        self._x2_min = x2_min
+        self._x2_max = x2_max
+        self._x3_min = x3_min
+        self._x3_max = x3_max
+        
+        self._N1 = N1
+        self._N2 = N2
+        self._N3 = N3
+        
+        self.__initialize()
         self.__place_rho()
-        
-        if (method == "convolution"):
-            self.__init_convolution()
-        elif (method=="nufft"):
-            self.__init_nufft()
     
     
     def __init_convolution(self):
         self.__kernel_out = np.full((self._N1, self._N1, self._N2, 2*self._N3), None)
     
     
-    def __init_nufft(self, __ms=2*self._N1, __mt = 2*self._N2, __mu = 2*self._N3, __eps = 10.0**(-5.0)):
+    def __init_nufft(self):
         # nufft parameters
-        self.__ms = 2*self._N1
-        self.__mt = 2*self._N2
-        self.__mu = 2*self._N3
-        
-        self.__eps = 10.0**(-5.0)
-        
         self.__volume = float(self.__ms)*float(self.__mt)*float(self.__mu)
         
         # coordinate related
@@ -129,9 +148,9 @@ class Poisson_Cyl_Sphere:
                   self.__crt_x3_min+0.5*self.__crt_dx3: self.__crt_x3_max+self.__crt_x3_range-0.5*self.__crt_dx3: (2*self._N3)*1j]
                   
         # replace the lower left corner w/ non-uniform grid 
-        self.__crt_x1_L[0:self._N1, 0:self._N2, 0:self._N1] = self.__crt_x1
-        self.__crt_x2_L[0:self._N1, 0:self._N2, 0:self._N1] = self.__crt_x2
-        self.__crt_x3_L[0:self._N1, 0:self._N2, 0:self._N1] = self.__crt_x3
+        self.__crt_x1_L[0:self._N1, 0:self._N2, 0:self._N3] = self.__crt_x1
+        self.__crt_x2_L[0:self._N1, 0:self._N2, 0:self._N3] = self.__crt_x2
+        self.__crt_x3_L[0:self._N1, 0:self._N2, 0:self._N3] = self.__crt_x3
         
         # save 
         self.__green = np.full((2*self._N1, 2*self._N2, 2*self._N3), None)
@@ -139,7 +158,12 @@ class Poisson_Cyl_Sphere:
         
         
     def reset_nufft_parameter(self, ms, mt, mu, eps):
-        self.__init_nufft(self, __ms = ms, __mt = mt, __mu = mu, __eps = eps)
+        self.__ms  = ms
+        self.__mt  = mt
+        self.__mu  = mu
+        self.__eps = eps
+        
+        self.__init_nufft()
 
         
     def __kernel(self):
@@ -251,8 +275,9 @@ class Poisson_Cyl_Sphere:
                     if (denominator != 0.0):
                         green[i, j, k] = -self.__crt_dx1*self.__crt_dx2*self.__crt_dx3 / denominator
 
-        # fix green_L[0,0,0]       
+        # fix green[0,0,0]       
         green[0,0,0] = - self.__crt_dx1*self.__crt_dx2*self.__crt_dx3/np.min([self.__crt_dx1,self.__crt_dx2,self.__crt_dx3])
+        #green[0,0,0] = 0.0
         
         self.__green = green
         return self.__green
@@ -270,7 +295,6 @@ class Poisson_Cyl_Sphere:
         x2_array = np.array(x2_L.ravel(), dtype=np.float64)
         x3_array = np.array(x3_L.ravel(), dtype=np.float64)
     
-        #volume = 8.0*float(N1*N2*N3)
         green = self.__init_green()
         green_flat = np.array(green.ravel(), dtype=np.complex128)
     
@@ -290,7 +314,7 @@ class Poisson_Cyl_Sphere:
         
         rho_L[0:self._N1, 0:self._N2, 0:self._N3] = \
             self.__rho_array * (self.__x1*self.__dx1*self.__dx2) / (self.__crt_dx1*self.__crt_dx2)
-        
+                
         return rho_L
         
         

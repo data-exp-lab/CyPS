@@ -387,10 +387,6 @@ class Problem():
         """
         
         self.problem = problem
-        if (problem != "sphere" and problem != "spheroid" and problem != "user"):
-            print("problem has to be sphere, spheroid or user. Reset problem to user.")
-            self.problem = "user"
-            
         self._x_grid = x_grid
         self._y_grid = y_grid
         self._z_grid = z_grid
@@ -450,16 +446,62 @@ class Sphere(Problem):
         
 
 class Spheroid(Problem):
-    def __init__(self):
-        pass
-    def _analytic_sol(self):
-        pass
+    def __init__(self, rho, a, b, x0, y0, z0, x_grid, y_grid, z_grid):
+        problem="spheroid"
+        super().__init__(x_grid, y_grid, z_grid, problem)        
+        
+        self.__add_spheroid(rho, a, b, x0, y0, z0)
+        
+        
+    def __analytic_sol(self, rho, a, b, x0, y0, z0):
+        ecc = np.sqrt(1.0 - (b/a)**2.0)
+        A   = np.sqrt(1.0-ecc**2.0)/ecc**3.0 * np.arcsin(ecc) - (1.0-ecc**2.0)/ecc*2.0
+        B   = 2.0/ecc**2.0 - 2.0*np.sqrt(1-ecc**2.0)/ecc**3.0*np.arcsin(ecc)
+        
+        idx = self.__dist2surface <= 1.0
+        
+        x2_shift = (self._x_grid - x0)**2.0
+        y2_shift = (self._y_grid - y0)**2.0
+        z2_shift = (self._z_grid - z0)**2.0
+        
+        Phi_analytic = \
+            -np.pi*rho*(A*(2.0*a**2.0-x2_shift-y2_shift)+B*(b**2.0 - z2_shift))
+        
+        Phi_analytic[idx] = \
+            -2.0*np.pi*rho*(a*b/ecc)
+        
+        return Phi_analytic
+        
+        
+    def __add_spheroid(self, rho, a, b, x0, y0, z0):
+        
+        a = float(a)
+        b = float(b)
+        self.__dist2center = \
+            np.sqrt( (self._x_grid-x0)**2.0 + (self._y_grid-y0)**2.0 + (self._z_grid-z0)**2.0 )
+            
+        self.__dist2surface = \
+            np.sqrt( ((self._x_grid-x0)**2.0 + (self._y_grid-y0)**2.0)/a**2.0 + (self._z_grid-z0)**2.0/b**2.0 )
+            
+        idx = self.__dist2surface <= 1.0
+        
+        self._rho_array[idx] += rho
+        self._analytic       += self.__analytic_sol(rho, a, b, x0, y0, z0)
+        
+        
+        
+    def get_analytic(self):
+        return self._analytic
+        
+    def get_rho(self):
+        return self._rho_array
             
 
 
 class User(Problem):
-    def __init__(self, rho_array, x_grid, y_grid, z_grid, problem="user"):
-        super().__init__(problem, x_grid, y_grid, z_grid)
+    def __init__(self, rho_array, x_grid, y_grid, z_grid):
+        problem="user"
+        super().__init__(x_grid, y_grid, z_grid, problem)
         
     def get_rho():
         return rho_array

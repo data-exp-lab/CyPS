@@ -390,13 +390,13 @@ class Problem():
         self._x_grid = x_grid
         self._y_grid = y_grid
         self._z_grid = z_grid
-        self.__grid_shape = x_grid.shape
-        self._analytic   = np.zeros(self.__grid_shape, dtype=np.float32)
-        self._rho_array  = np.zeros(self.__grid_shape, dtype=np.float32)
+        self._grid_shape = x_grid.shape
+        self._analytic   = np.zeros(self._grid_shape, dtype=np.float32)
+        self._rho_array  = np.zeros(self._grid_shape, dtype=np.float32)
     
     
     def get_rho(self):
-        pass
+        return self._rho_array
         
     def get_analytic(self):
         print("No existing implemented analytic solution.")
@@ -440,9 +440,6 @@ class Sphere(Problem):
     def get_analytic(self):
         return self._analytic
         
-    def get_rho(self):
-        return self._rho_array
-        
         
 
 class Spheroid(Problem):
@@ -456,19 +453,35 @@ class Spheroid(Problem):
     def __analytic_sol(self, rho, a, b, x0, y0, z0):
         ecc = np.sqrt(1.0 - (b/a)**2.0)
         A   = np.sqrt(1.0-ecc**2.0)/ecc**3.0 * np.arcsin(ecc) - (1.0-ecc**2.0)/ecc*2.0
-        B   = 2.0/ecc**2.0 - 2.0*np.sqrt(1-ecc**2.0)/ecc**3.0*np.arcsin(ecc)
+        B   = 2.0/ecc**2.0 - 2.0*np.sqrt(1.0-ecc**2.0)/(ecc**3.0)*np.arcsin(ecc)
         
-        idx = self.__dist2surface <= 1.0
+        idx = self.__dist2surface > 1.0
         
         x2_shift = (self._x_grid - x0)**2.0
         y2_shift = (self._y_grid - y0)**2.0
         z2_shift = (self._z_grid - z0)**2.0
         
         Phi_analytic = \
-            -np.pi*rho*(A*(2.0*a**2.0-x2_shift-y2_shift)+B*(b**2.0 - z2_shift))
+            -np.pi*rho*(A*(2.0*a**2.0-x2_shift-y2_shift)+B*(b**2.0 - z2_shift)) * a*b**2.0
+        
+        #coeff = [1.0, (a**2.0+b**2.0) - (x2_shift+y2_shift+z2_shift), a**2.0*b**2.0-a**2.0*z2_shift-b**2.0*(x2_shift+y2_shift)]
+        
+        ll = np.zeros(self._grid_shape)
+        for i in range(self._grid_shape[0]):
+            for j in range(self._grid_shape[1]):
+                for k in range(self._grid_shape[2]):
+                    coeff = [1.0, (a**2.0+b**2.0) - (x2_shift[i,j,k]+y2_shift[i,j,k]+z2_shift[i,j,k]), \
+                             a**2.0*b**2.0-a**2.0*z2_shift[i,j,k]-b**2.0*(x2_shift[i,j,k]+y2_shift[i,j,k])]
+                    roots = np.roots(coeff)
+                    ll[i, j, k] = np.max(roots)
+        
+        h_array = a*ecc/np.sqrt(b**2.0+ll)
+        h = h_array[idx]        
         
         Phi_analytic[idx] = \
-            -2.0*np.pi*rho*(a*b/ecc)
+            -2.0*np.pi*rho*(a*b/ecc)* \
+                ( np.arctan(h) - 1.0/(2.0*a**2.0*ecc**2.0) * \
+                                ( (x2_shift[idx]+y2_shift[idx])*(np.arctan(h)-h/(1.0+h**2.0)) + 2.0*z2_shift[idx]*(h-np.arctan(h)) ) )
         
         return Phi_analytic
         
@@ -493,15 +506,11 @@ class Spheroid(Problem):
     def get_analytic(self):
         return self._analytic
         
-    def get_rho(self):
-        return self._rho_array
-            
+      
 
 
 class User(Problem):
     def __init__(self, rho_array, x_grid, y_grid, z_grid):
         problem="user"
         super().__init__(x_grid, y_grid, z_grid, problem)
-        
-    def get_rho():
-        return rho_array
+
